@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="ta">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Order Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #0a1628 0%, #0d2137 50%, #0a1628 100%);
+      color: #fff;
+      padding: 24px;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 28px;
+    }
+
+    .header-icon {
+      width: 52px; height: 52px;
+      background: linear-gradient(135deg, #25D366, #128C7E);
+      border-radius: 16px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 26px;
+    }
+
+    .header h1 { font-size: 22px; font-weight: 700; }
+    .header p { font-size: 12px; color: rgba(255,255,255,0.4); margin-top: 2px; }
+
+    .refresh-btn {
+      margin-left: auto;
+      padding: 10px 18px;
+      background: rgba(37,211,102,0.15);
+      border: 1.5px solid rgba(37,211,102,0.4);
+      border-radius: 10px;
+      color: #25D366;
+      font-family: 'Poppins', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .refresh-btn:hover {
+      background: rgba(37,211,102,0.25);
+    }
+
+    /* Stats */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+
+    .stat-card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px;
+      padding: 20px 16px;
+      text-align: center;
+    }
+
+    .stat-card .emoji { font-size: 28px; margin-bottom: 8px; }
+    .stat-card .value { font-size: 28px; font-weight: 700; color: #25D366; }
+    .stat-card .label { font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 4px; }
+
+    /* Charts */
+    .charts {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 18px;
+      margin-bottom: 24px;
+    }
+
+    .chart-card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 18px;
+      padding: 20px;
+    }
+
+    .chart-card h3 {
+      font-size: 14px;
+      font-weight: 600;
+      color: rgba(255,255,255,0.7);
+      margin-bottom: 16px;
+    }
+
+    .chart-wrap { position: relative; height: 200px; }
+
+    /* Table */
+    .table-card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 18px;
+      padding: 20px;
+      overflow-x: auto;
+    }
+
+    .table-card h3 {
+      font-size: 14px;
+      font-weight: 600;
+      color: rgba(255,255,255,0.7);
+      margin-bottom: 16px;
+    }
+
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+
+    th {
+      text-align: left;
+      padding: 10px 12px;
+      background: rgba(37,211,102,0.1);
+      color: #25D366;
+      font-weight: 600;
+      font-size: 12px;
+      border-radius: 4px;
+    }
+
+    td {
+      padding: 10px 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      color: rgba(255,255,255,0.8);
+    }
+
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,0.03); }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      background: rgba(37,211,102,0.15);
+      color: #25D366;
+    }
+
+    /* Loading */
+    .loading {
+      text-align: center;
+      padding: 60px 20px;
+      color: rgba(255,255,255,0.4);
+    }
+
+    .loading .spinner {
+      width: 40px; height: 40px;
+      border: 3px solid rgba(37,211,102,0.2);
+      border-top-color: #25D366;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 16px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .error {
+      text-align: center;
+      padding: 40px;
+      color: #ff6b6b;
+      background: rgba(255,107,107,0.1);
+      border-radius: 14px;
+      border: 1px solid rgba(255,107,107,0.2);
+    }
+
+    .no-data {
+      text-align: center;
+      padding: 40px;
+      color: rgba(255,255,255,0.3);
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-icon">📊</div>
+  <div>
+    <h1>Order Dashboard</h1>
+    <p id="lastUpdated">Loading...</p>
+  </div>
+  <button class="refresh-btn" onclick="loadData()">🔄 Refresh</button>
+</div>
+
+<div id="mainContent">
+  <div class="loading">
+    <div class="spinner"></div>
+    <p>Data load ஆகிறது...</p>
+  </div>
+</div>
+
+<script>
+  const SHEET_ID = "1XMBguKcorOm471-msUVm0M5Byz9etdnfP_efJFQ-528";
+  const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
+
+  let barChart = null;
+  let lineChart = null;
+
+  async function loadData() {
+    document.getElementById('mainContent').innerHTML = `
+      <div class="loading">
+        <div class="spinner"></div>
+        <p>Data load ஆகிறது...</p>
+      </div>`;
+
+    try {
+      const res = await fetch(SHEET_URL);
+      const text = await res.text();
+      const json = JSON.parse(text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*?)\);/)[1]);
+      const rows = json.table.rows;
+
+      if (!rows || rows.length === 0) {
+        document.getElementById('mainContent').innerHTML = `
+          <div class="no-data">😔 இன்னும் orders இல்லை — form submit பண்ணுங்கள்!</div>`;
+        return;
+      }
+
+      // Parse rows: [Timestamp, Name, Phone, Item, Message]
+      const data = rows.map(r => ({
+        timestamp: r.c[0]?.v || "",
+        name:      r.c[1]?.v || "",
+        phone:     r.c[2]?.v || "",
+        item:      r.c[3]?.v || "Unknown",
+        message:   r.c[4]?.v || ""
+      }));
+
+      // Stats
+      const totalOrders = data.length;
+      const uniqueCustomers = new Set(data.map(d => d.phone)).size;
+
+      // Item counts
+      const itemCount = {};
+      data.forEach(d => {
+        const item = d.item || "Unknown";
+        itemCount[item] = (itemCount[item] || 0) + 1;
+      });
+      const topItem = Object.entries(itemCount).sort((a,b) => b[1]-a[1])[0];
+
+      // Daily orders (last 7 days)
+      const dayCount = {};
+      data.forEach(d => {
+        if (d.timestamp) {
+          const date = d.timestamp.split('T')[0] || d.timestamp.substring(0,10);
+          dayCount[date] = (dayCount[date] || 0) + 1;
+        }
+      });
+      const sortedDays = Object.entries(dayCount).sort((a,b) => a[0].localeCompare(b[0])).slice(-7);
+
+      // Last 5 orders
+      const recent = [...data].reverse().slice(0, 5);
+
+      // Build UI
+      document.getElementById('mainContent').innerHTML = `
+        <div class="stats">
+          <div class="stat-card">
+            <div class="emoji">🛒</div>
+            <div class="value">${totalOrders}</div>
+            <div class="label">மொத்த Orders</div>
+          </div>
+          <div class="stat-card">
+            <div class="emoji">👥</div>
+            <div class="value">${uniqueCustomers}</div>
+            <div class="label">Customers</div>
+          </div>
+          <div class="stat-card">
+            <div class="emoji">🏆</div>
+            <div class="value" style="font-size:16px;margin-top:4px">${topItem ? topItem[0] : '-'}</div>
+            <div class="label">Top Item</div>
+          </div>
+          <div class="stat-card">
+            <div class="emoji">📅</div>
+            <div class="value">${sortedDays.length > 0 ? sortedDays[sortedDays.length-1][1] : 0}</div>
+            <div class="label">இன்று Orders</div>
+          </div>
+        </div>
+
+        <div class="charts">
+          <div class="chart-card">
+            <h3>🍽️ Item-வாரியாக Orders</h3>
+            <div class="chart-wrap">
+              <canvas id="barChart"></canvas>
+            </div>
+          </div>
+          <div class="chart-card">
+            <h3>📈 நாள்வாரியாக Orders</h3>
+            <div class="chart-wrap">
+              <canvas id="lineChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="table-card">
+          <h3>🕐 சமீபத்திய Orders</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>பெயர்</th>
+                <th>Phone</th>
+                <th>Item</th>
+                <th>குறிப்பு</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${recent.map(d => `
+                <tr>
+                  <td>${d.name}</td>
+                  <td>${d.phone}</td>
+                  <td><span class="badge">${d.item}</span></td>
+                  <td>${d.message || '-'}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+
+      // Bar Chart
+      const barCtx = document.getElementById('barChart').getContext('2d');
+      if (barChart) barChart.destroy();
+      barChart = new Chart(barCtx, {
+        type: 'bar',
+        data: {
+          labels: Object.keys(itemCount),
+          datasets: [{
+            label: 'Orders',
+            data: Object.values(itemCount),
+            backgroundColor: 'rgba(37,211,102,0.6)',
+            borderColor: '#25D366',
+            borderWidth: 2,
+            borderRadius: 8
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { color: 'rgba(255,255,255,0.5)', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,0.05)' } },
+            y: { ticks: { color: 'rgba(255,255,255,0.5)', stepSize: 1 }, grid: { color: 'rgba(255,255,255,0.05)' } }
+          }
+        }
+      });
+
+      // Line Chart
+      const lineCtx = document.getElementById('lineChart').getContext('2d');
+      if (lineChart) lineChart.destroy();
+      lineChart = new Chart(lineCtx, {
+        type: 'line',
+        data: {
+          labels: sortedDays.map(d => d[0]),
+          datasets: [{
+            label: 'Orders',
+            data: sortedDays.map(d => d[1]),
+            borderColor: '#25D366',
+            backgroundColor: 'rgba(37,211,102,0.1)',
+            borderWidth: 2.5,
+            pointBackgroundColor: '#25D366',
+            pointRadius: 5,
+            tension: 0.4,
+            fill: true
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { color: 'rgba(255,255,255,0.5)', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.05)' } },
+            y: { ticks: { color: 'rgba(255,255,255,0.5)', stepSize: 1 }, grid: { color: 'rgba(255,255,255,0.05)' } }
+          }
+        }
+      });
+
+      document.getElementById('lastUpdated').textContent =
+        `கடைசியாக update: ${new Date().toLocaleTimeString('ta-IN')}`;
+
+    } catch (err) {
+      document.getElementById('mainContent').innerHTML = `
+        <div class="error">
+          ❌ Data load ஆகவில்லை!<br/><br/>
+          <small>Google Sheet-ஐ "Anyone with link - Viewer" ஆக share பண்ணுங்கள்</small>
+        </div>`;
+      console.error(err);
+    }
+  }
+
+  loadData();
+</script>
+
+</body>
+</html>
